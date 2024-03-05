@@ -7,6 +7,7 @@ import dat3.recipe.repository.CategoryRepository;
 import dat3.recipe.repository.RecipeRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -43,6 +44,9 @@ public class RecipeService {
                 orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Only existing categories are allowed"));
         Recipe newRecipe = new Recipe();
         updateRecipe(newRecipe, request, category);
+        // GET USER
+        String owner = SecurityContextHolder.getContext().getAuthentication().getName();
+        newRecipe.setOwner(owner);
         recipeRepository.save(newRecipe);
         return new RecipeDto(newRecipe,false);
     }

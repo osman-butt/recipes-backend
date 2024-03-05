@@ -20,6 +20,8 @@ public class Recipe {
     int id;
     private String name;
 
+    private String owner;
+
     @Column(columnDefinition="TEXT")
     private String instructions;
 
