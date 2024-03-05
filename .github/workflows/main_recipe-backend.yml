@@ -1,17 +1,13 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy App
+name: Build and deploy JAR app to Azure Web App - recipe-backend
+
 on:
   push:
     branches:
       - main
   workflow_dispatch:
-
-env:
-  JDBC_DATABASE_URL: ${{ secrets.JDBC_DATABASE_URL }}
-  JDBC_USERNAME: ${{ secrets.JDBC_USERNAME }}
-  JDBC_PASSWORD: ${{ secrets.JDBC_PASSWORD }}
 
 jobs:
   build:
@@ -33,7 +29,6 @@ jobs:
         with:
           name: java-app
           path: '${{ github.workspace }}/target/*.jar'
-          retention-days: 1
 
   deploy:
     runs-on: ubuntu-latest
@@ -53,9 +48,9 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_E7834C8EE06E41E5A3B55B3F94CF164D }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_09797305616740C1BEFFFF15AF0B4B64 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_9BBD62AD786D4DDC83FCFFCE668F211A }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_748122EBFE8B40179E335325673A844E }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_287A253C67CA4366B495CC77ABBCA012 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_75D8119439EF49E29C005F2A90EBFD2E }}
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
