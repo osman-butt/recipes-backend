@@ -5,13 +5,21 @@ import dat3.recipe.entity.Category;
 import dat3.recipe.entity.Recipe;
 import dat3.recipe.repository.CategoryRepository;
 import dat3.recipe.repository.RecipeRepository;
+import dat3.security.entity.Role;
+import dat3.security.entity.UserWithRoles;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.lang.reflect.Array;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class RecipeService {
@@ -45,7 +53,7 @@ public class RecipeService {
         Recipe newRecipe = new Recipe();
         updateRecipe(newRecipe, request, category);
         // GET USER
-        String owner = SecurityContextHolder.getContext().getAuthentication().getName();
+        String owner = getCurrentUserName();
         newRecipe.setOwner(owner);
         recipeRepository.save(newRecipe);
         return new RecipeDto(newRecipe,false);
@@ -60,15 +68,29 @@ public class RecipeService {
 
         Recipe recipeToEdit = recipeRepository.findById(id).orElseThrow(()
                 -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Recipe not found"));
-        updateRecipe(recipeToEdit,request, category);
-        recipeRepository.save(recipeToEdit);
-        return new RecipeDto(recipeToEdit,false);
+
+        boolean isOwner = getCurrentUserName().equals(recipeToEdit.getOwner());
+        boolean isAdmin = isCurrentUserAdmin();
+
+        if (isOwner || isAdmin) {
+            updateRecipe(recipeToEdit,request, category);
+            recipeRepository.save(recipeToEdit);
+            return new RecipeDto(recipeToEdit,false);
+        } else {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to change the Recipe");
+        }
     }
 
     public ResponseEntity deleteRecipe(int id) {
         Recipe recipe = recipeRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Recipe not found"));
-        recipeRepository.delete(recipe);
-        return new ResponseEntity(HttpStatus.NO_CONTENT);
+        boolean isOwner = getCurrentUserName().equals(recipe.getOwner());
+        boolean isAdmin = isCurrentUserAdmin();
+        if (isOwner || isAdmin) {
+            recipeRepository.delete(recipe);
+            return new ResponseEntity(HttpStatus.NO_CONTENT);
+        } else {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to change the Recipe");
+        }
     }
 
     private void updateRecipe(Recipe original, RecipeDto r, Category category) {
@@ -79,6 +101,15 @@ public class RecipeService {
         original.setYouTube(r.getYouTube());
         original.setSource(r.getSource());
         original.setCategory(category);
+    }
+
+    private String getCurrentUserName() {
+        return SecurityContextHolder.getContext().getAuthentication().getName();
+    }
+
+    private boolean isCurrentUserAdmin() {
+        Jwt jwt = (Jwt) (SecurityContextHolder.getContext().getAuthentication().getPrincipal());
+        return Arrays.asList(jwt.getClaimAsStringList("roles").get(0).split("\\s+")).contains("ADMIN");
     }
 
 }
