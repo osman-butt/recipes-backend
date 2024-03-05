@@ -34,6 +34,12 @@ public class RecipeController {
         return recipeService.addRecipe(request);
     }
 
+    @PutMapping(path = "/{id}")
+    public RecipeDto addRecipe(@RequestBody RecipeDto request,@PathVariable int id) {
+        return recipeService.editRecipe(request,id);
+    }
+
+
 
 }
 
