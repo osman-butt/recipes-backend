@@ -29,6 +29,11 @@ public class RecipeController {
         return recipeService.getRecipeById(id);
     }
 
+    @PostMapping
+    public RecipeDto addRecipe(@RequestBody RecipeDto request) {
+        return recipeService.addRecipe(request);
+    }
+
 
 }
 

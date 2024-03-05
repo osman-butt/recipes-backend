@@ -1,6 +1,7 @@
 package dat3.recipe.service;
 
 import dat3.recipe.dto.RecipeDto;
+import dat3.recipe.entity.Category;
 import dat3.recipe.entity.Recipe;
 import dat3.recipe.repository.CategoryRepository;
 import dat3.recipe.repository.RecipeRepository;
@@ -33,6 +34,27 @@ public class RecipeService {
         return new RecipeDto(recipe,false);
     }
 
+    public RecipeDto addRecipe(RecipeDto request) {
+        if (request.getId() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot provide the id for a new recipe");
+        }
+        Category category = categoryRepository.findByName(request.getCategory()).
+                orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Only existing categories are allowed"));
+        Recipe newRecipe = new Recipe();
+        updateRecipe(newRecipe, request, category);
+        recipeRepository.save(newRecipe);
+        return new RecipeDto(newRecipe,false);
+    }
+
+    private void updateRecipe(Recipe original, RecipeDto r, Category category) {
+        original.setName(r.getName());
+        original.setInstructions(r.getInstructions());
+        original.setIngredients(r.getIngredients());
+        original.setThumb(r.getThumb());
+        original.setYouTube(r.getYouTube());
+        original.setSource(r.getSource());
+        original.setCategory(category);
+    }
 
 }
 
