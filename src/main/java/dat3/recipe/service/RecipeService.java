@@ -5,27 +5,21 @@ import dat3.recipe.entity.Category;
 import dat3.recipe.entity.Recipe;
 import dat3.recipe.repository.CategoryRepository;
 import dat3.recipe.repository.RecipeRepository;
-import dat3.security.entity.Role;
-import dat3.security.entity.UserWithRoles;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.lang.reflect.Array;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.security.Principal;
+import java.util.*;
 
 @Service
 public class RecipeService {
 
-    private RecipeRepository recipeRepository;
-    private CategoryRepository categoryRepository;
+    private final RecipeRepository recipeRepository;
+    private final CategoryRepository categoryRepository;
 
     public RecipeService(RecipeRepository recipeRepository, CategoryRepository categoryRepository) {
         this.recipeRepository = recipeRepository;
@@ -34,8 +28,7 @@ public class RecipeService {
 
     public List<RecipeDto> getAllRecipes(String category) {
         List<Recipe> recipes = category == null ? recipeRepository.findAll() : recipeRepository.findByCategoryName(category);
-        List<RecipeDto> recipeResponses = recipes.stream().map((r) -> new RecipeDto(r,false)).toList();
-        return recipeResponses;
+        return recipes.stream().map((r) -> new RecipeDto(r,false)).toList();
     }
 
     public RecipeDto getRecipeById(int idInt) {
@@ -44,7 +37,7 @@ public class RecipeService {
         return new RecipeDto(recipe,false);
     }
 
-    public RecipeDto addRecipe(RecipeDto request) {
+    public RecipeDto addRecipe(RecipeDto request,Principal principal) {
         if (request.getId() != null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot provide the id for a new recipe");
         }
@@ -52,14 +45,12 @@ public class RecipeService {
                 orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Only existing categories are allowed"));
         Recipe newRecipe = new Recipe();
         updateRecipe(newRecipe, request, category);
-        // GET USER
-        String owner = getCurrentUserName();
-        newRecipe.setOwner(owner);
+        newRecipe.setOwner(principal.getName());
         recipeRepository.save(newRecipe);
         return new RecipeDto(newRecipe,false);
     }
 
-    public RecipeDto editRecipe(RecipeDto request, int id) {
+    public RecipeDto editRecipe(RecipeDto request, int id,Principal principal) {
         if (request.getId() != id) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot change the id of an existing recipe");
         }
@@ -69,10 +60,9 @@ public class RecipeService {
         Recipe recipeToEdit = recipeRepository.findById(id).orElseThrow(()
                 -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Recipe not found"));
 
-        boolean isOwner = getCurrentUserName().equals(recipeToEdit.getOwner());
-        boolean isAdmin = isCurrentUserAdmin();
+        boolean isOwner = principal.getName().equals(recipeToEdit.getOwner());
 
-        if (isOwner || isAdmin) {
+        if (isOwner || isAdmin(principal)) {
             updateRecipe(recipeToEdit,request, category);
             recipeRepository.save(recipeToEdit);
             return new RecipeDto(recipeToEdit,false);
@@ -81,13 +71,12 @@ public class RecipeService {
         }
     }
 
-    public ResponseEntity deleteRecipe(int id) {
+    public ResponseEntity<?> deleteRecipe(int id, Principal principal) {
         Recipe recipe = recipeRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Recipe not found"));
-        boolean isOwner = getCurrentUserName().equals(recipe.getOwner());
-        boolean isAdmin = isCurrentUserAdmin();
-        if (isOwner || isAdmin) {
+        boolean isOwner = principal.getName().equals(recipe.getOwner());
+        if (isOwner || isAdmin(principal)) {
             recipeRepository.delete(recipe);
-            return new ResponseEntity(HttpStatus.NO_CONTENT);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         } else {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to change the Recipe");
         }
@@ -103,13 +92,10 @@ public class RecipeService {
         original.setCategory(category);
     }
 
-    private String getCurrentUserName() {
-        return SecurityContextHolder.getContext().getAuthentication().getName();
-    }
-
-    private boolean isCurrentUserAdmin() {
-        Jwt jwt = (Jwt) (SecurityContextHolder.getContext().getAuthentication().getPrincipal());
-        return Arrays.asList(jwt.getClaimAsStringList("roles").get(0).split("\\s+")).contains("ADMIN");
+    private boolean isAdmin(Principal principal) {
+        Collection<? extends GrantedAuthority> userRoles = ((Authentication) principal).getAuthorities();
+        return userRoles.stream()
+                .anyMatch(role -> role.getAuthority().equals("ADMIN"));
     }
 
 }

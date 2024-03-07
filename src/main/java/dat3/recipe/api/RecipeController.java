@@ -5,6 +5,7 @@ import dat3.recipe.service.RecipeService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -31,21 +32,18 @@ public class RecipeController {
     }
 
     @PostMapping
-    public RecipeDto addRecipe(@RequestBody RecipeDto request) {
-        return recipeService.addRecipe(request);
+    public RecipeDto addRecipe(@RequestBody RecipeDto request, Principal principal) {
+        return recipeService.addRecipe(request,principal);
     }
 
     @PutMapping(path = "/{id}")
-    public RecipeDto addRecipe(@RequestBody RecipeDto request,@PathVariable int id) {
-        return recipeService.editRecipe(request,id);
+    public RecipeDto addRecipe(@RequestBody RecipeDto request,@PathVariable int id, Principal principal) {
+        return recipeService.editRecipe(request,id,principal);
     }
 
     @DeleteMapping(path = "/{id}")
-    public ResponseEntity deleteRecipe(@PathVariable int id) {
-        return recipeService.deleteRecipe(id);
+    public ResponseEntity<?> deleteRecipe(@PathVariable int id, Principal principal) {
+        return recipeService.deleteRecipe(id,principal);
     }
-
-
-
 }
 
